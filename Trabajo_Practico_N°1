@@ -1,0 +1,88 @@
+%%OBSERVACIONES DEL PROFESOR, LIMITARME AL ENUNCIADO
+%%FIJARSE DE HACER CADA 1 ms NO IMPORTA QUE SEA IGUAL A LA GRAFICA.
+
+
+%%Limpieza de pantalla y parametros
+close all; clear all; clc;
+%Variables de parametros
+R=4.7e3;    %R = 4700 ohm
+L=10e-6;    %L = 10uHy
+C=100e-9;   %C = 100nF
+
+%Constantes necesarias para la grafica del escalon
+T=0.1; %INDICA HASTA DONDE SE GRAFICA EN ESTE CASO SERA 0.1
+Kmax=1000;%INDICA LA CANTIDAD DE MUESTRAS (VERIFICAR)
+At=T/Kmax;%TIEMPO (t0)
+t=0:At:T-At;%LIMITES DEL GRAFICO INDICA COMIENZO, PASOS DE AVANCE Y FINAL
+
+%CODIGO DEL ESCALON UNITARIO
+u=zeros(1,Kmax);%ARREGLO DE CEROS SE HACE ASI PARA ASEGURAR UNA ENTRADA
+                %AL ESCALON PERFECTA SIN MOSTRAR EL INCREMENTO EN EL
+                %TIEMPO DE LO CONTRARIO SE VERIA COMO UNA RAMPA
+%ESTA ES LA QUE DA FORMA AL ESCALON
+signo=1;
+for i=100:1:1000
+    if i==500
+        signo=2;
+    end
+    if signo==1
+        u(1,i)=12;  %ESTABLECE DESDE LA MUESTRA 100 A LA 500 UN VALOR DE 12
+    end
+    if signo==2
+        u(1,i)=-12;
+    end
+end
+%{
+while i<501
+    u(1,i)=12;  %ESTABLECE DESDE LA MUESTRA 100 A LA 500 UN VALOR DE 12
+    i=i+1;
+end
+
+while i>500 && i<1001
+    u(1,i)=-12; %ESTABLECE DESDE LA MUESTRA 100 A LA 500 UN VALOR DE 12
+    i=i+1;
+end
+%}
+
+%Variables de Estado
+%Matriz A (Matriz de estado)
+A=[-R/L -1/L; 1/C 0];
+%Matriz B (Matriz de entrada)
+B=[1/L; 0];
+%Matriz C(Transpuesta) (Matriz de salida)          NOSE SI VA ACA
+%C_T=[R 0];
+%C_T=[0 1];
+C_T=[R 0];              %dijo que debe ser con el valor de R es decir 4700
+%Matriz D (Matriz de transmision directa)
+D=0;
+
+%Grafica del escalon
+figure(1);
+plot(t,u)  %grafica 2D siendo t el eje X y u el eje Y  
+title('Entrada al escalon de 12V'); %debe ir despues del plot
+hold on;   %hace que la grafica se mantenga y no se borre
+%Cambio de Limites en los Graficos
+xlim([0 0.1])
+ylim([-15 15])
+grid;
+
+%Grafica de la tensión
+figure(2);
+%Comando necesario para guardar el espacio de estados
+%ss = guarda el valor de los espacios de estado
+%sys= objeto del modelo ss es el nombre que se le debe poner cuando uso ss
+sys=ss(A,B,C_T,D)
+y=lsim(sys,u,t);    %Comando para mostrar la salida de un sistema dinamico
+plot(t,y)
+title('Tensión X_2 VC_t');
+xlim([0 0.1])
+ylim([-15 15])
+grid; hold on;
+
+%plot
+%subplot 
+%syms R L C;
+
+%Variable de entrada
+%Ve=12;
+%i=Ve/R;
