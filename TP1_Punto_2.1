@@ -1,0 +1,66 @@
+%%%%%%%%%%%%%%%%%EJERCICIO 2%%%%%%%%%%%%%%%%%%%%%
+ 
+clear all,close all,clc
+ 
+X=-[0; 0; 0];
+ii=0;
+t_etapa=1e-7;
+wRef=2;
+tF=5;
+color_='b';
+ 
+e=zeros(tF/t_etapa,1);
+u=0;
+ 
+for t=0.01:t_etapa:tF
+    ii=ii+1;
+    k=ii+2;
+    X=modmotor(t_etapa, X, u);
+    e(k)=wRef-X(1); %Error
+    %u=+uA1*e(k)+B1*e(k-1)+C1*e(k-2);%Controlador PID
+    u=12;
+    x1(ii)=X(1);%Omega
+    x2(ii)=X(2);%wp
+    x3(ii)=X(3);
+    acc(ii)=u;
+end
+t=0.01:t_etapa:tF;
+subplot(4,1,1);
+hold on;
+plot(t,x1,color_);title('Tita_t');
+subplot(4,1,2);
+hold on;
+plot(t,acc,color_);title('Entrada u_t, v_a');
+subplot(4,1,3);
+hold on;
+plot(t,x2,color_);title('Salida y, \omega_t');
+subplot(4,1,4);
+hold on;
+plot(t,x3,color_);title('ia');
+ 
+xlabel('Tiempo [Seg.]');
+ 
+function [x]=modmotor(t_etapa, xant, accion)
+%Parametros del Motor
+Laa=366e-6;
+J=5e-9;
+Ra=55.6;
+B=0;
+Ki=6.49e-3;
+Km=6.53e-3;
+ 
+T1=0;%Torque de Carga
+Va=accion;
+h=1e-7;
+tita= xant(1);
+wr= xant(2);
+ia= xant(3);
+for ii=1:t_etapa/h %uso las formulas del motor
+    wp=(Ki/J)*ia-(B/J)*wr-(1/J)*T1;
+    wr=wr+h*wp;
+    tita=tita+h*wr;
+    iap=(-Ra/Laa)*ia-(Km/Laa)*wr+(1/Laa)*Va;
+    ia=ia+h*iap;
+end
+x=[tita,wr,ia];
+end
