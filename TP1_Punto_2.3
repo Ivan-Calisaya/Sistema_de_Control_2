@@ -1,0 +1,219 @@
+%%%%%%%%%%%%EJERCICIO 2.3 TP1 PUCHETA%%%%%%%%%%%%%%%%%%
+ 
+%%Limpieza de pantalla y parametros
+close all; clear all; clc;
+ 
+%Constantes necesarias para la grafica del escalon
+T=0.6; %INDICA HASTA DONDE SE GRAFICA EN ESTE CASO SERA 0.1
+Kmax=10000;%INDICA LA CANTIDAD DE MUESTRAS (VERIFICAR)
+At=T/Kmax;%TIEMPO (t0)
+t=0:At:T-At;%LIMITES DEL GRAFICO INDICA COMIENZO, PASOS DE AVANCE Y FINAL
+ 
+%CODIGO DEL ESCALON UNITARIO
+u=zeros(1,10000);%ARREGLO DE CEROS SE HACE ASI PARA ASEGURAR UNA ENTRADA
+                %AL ESCALON PERFECTA SIN MOSTRAR EL INCREMENTO EN EL
+                %TIEMPO DE LO CONTRARIO SE VERIA COMO UNA RAMPA
+%ESTA ES LA QUE DA FORMA AL ESCALON
+signo=1;
+%416 para poder hacer lo mas parecida a la grafica de la tabla posible.
+for i=416:1:10000     %cambie aca 10:1:1000
+    %CON ESTE IF SE HACE LA FORMA DE ESCALON MOSTRADA EN EL ESCALON PERO SI
+    %LO DEJO NO SE PUEDE HACER UNA COMPARACIÓN CORRECTA
+    %{
+    if i==2500
+        signo=0;
+    end
+    %}
+    if signo==1
+        u(1,i)=12;  %ESTABLECE DESDE LA MUESTRA 100 A LA 500 UN VALOR DE 12
+    end
+    if signo==0
+        u(1,i)=-12;
+    end
+end
+ 
+figure(1)
+plot(t,u);grid on;  %GRAFICA DEL ESCALON
+xlim([0 0.7]);
+ylim([-20 20]);
+title('u');      
+ 
+%Importo los valores de la tabla para graficarlos
+datos=xlsread('Curvas_Medidas_Motor_2023.xlsx')
+ 
+figure(2)
+plot(datos(:,1),datos(:,2));grid on;
+xlim([0 0.7]);
+ylim([-200 200]);
+title('wr');                %Grafico wr (1 columna es tiempo y la 2 es wr)
+hold on;
+ 
+figure(3)
+plot(datos(:,1),datos(:,3),'red');grid on;
+xlim([0 0.7]);
+ylim([-0.5 0.5]);
+title('ia');                %Grafico i (3ra columna de la tabla y tiempo)
+hold on;
+ 
+figure(4)
+plot(datos(:,1),datos(:,4),'blue');grid on;
+xlim([0 0.7]);
+ylim([-20 20]);
+title('Va');                %Grafico i (4ra columna de la tabla y tiempo)
+hold on;
+ 
+figure(5)
+plot(datos(:,1),datos(:,5),'green');grid on;
+%xlim([0 0.7]);
+%ylim([-0.5 0.5]);
+title('Torque (T_L)');      %Grafico torque (5ta columna de tabla y tiempo)
+hold on;
+ 
+%APLICANDO EL CODIGO DE CHEN
+ 
+ii=0;   %for t_inic=10:15
+ii=ii+1;
+ 
+%VALORES TOMADOS DE LA TABLA EXCEL (SELECCIONANDO 3 PUNTOS DEL GRAFICO)
+ 
+%LE RESTE 0.025 A CADA VALOR DE TIEMPO
+%MIS VALORES
+t1=0.0000004;           %LE RESTE 0.025 POR ZONA MUERTA
+y_t1=0.00096;           %104
+t2=0.0001000999999994;  %LE RESTE 0.025 POR ZONA MUERTA
+y_2t2=41.1147073437574; %1101
+t3=0.0002000999999988;  %LE RESTE 0.025 POR ZONA MUERTA
+y_3t3=75.2782142737569; %2101
+ 
+StepAmplitude=1;
+y_end=198.248762875376; %VALOR ELEGIDO DE LA TABLA 15109
+ 
+K=y_end/StepAmplitude;
+k1=((1/StepAmplitude)*y_t1/K)-1;%Afecto el valor del Escalon
+k2=((1/StepAmplitude)*y_2t2/K)-1;
+k3=((1/StepAmplitude)*y_3t3/K)-1;
+be=4*k1^3*k3-3*k1^2*k2^2-4*k2^3+k3^2+6*k1*k2*k3;
+alfa1=(k1*k2+k3-sqrt(be))/(2*(k1^2+k2));
+alfa2=(k1*k2+k3+sqrt(be))/(2*(k1^2+k2));
+ 
+beta=(2*k1^3+3*k1*k2*k3-sqrt(be))/(sqrt(be));
+ 
+T1_ang=-t1/log(alfa1);  %PUEDO PONER T1 CON 7 DIGITOS LUEGO DE LA COMA
+T2_ang=-t1/log(alfa2);
+T3_ang=beta*(T1_ang-T2_ang)+T1_ang;
+T1(ii)=T1_ang;
+T2(ii)=T2_ang;
+T3(ii)=T3_ang;
+T3_ang=sum(T3/length(T3));
+T2_ang=sum(T2/length(T2));
+T1_ang=sum(T1/length(T1));
+ 
+sys_G_ang=tf(K,conv([T1_ang 1],[T2_ang 1]))
+ 
+figure(6);
+ 
+[yaprox,taprox]=lsim(sys_G_ang, u/12, t);
+ 
+plot(taprox,yaprox,'red');title('wr Chen');grid on;
+ 
+%Con el Torque
+ 
+%Constantes necesarias para la grafica del escalon
+T=0.6; %INDICA HASTA DONDE SE GRAFICA EN ESTE CASO SERA 0.1
+Kmax=10000;%INDICA LA CANTIDAD DE MUESTRAS (VERIFICAR)
+At=T/Kmax;%TIEMPO (t0)
+t=0:At:T-At;%LIMITES DEL GRAFICO INDICA COMIENZO, PASOS DE AVANCE Y FINAL
+ 
+%CODIGO DEL ESCALON UNITARIO
+u=zeros(1,10000);%ARREGLO DE CEROS SE HACE ASI PARA ASEGURAR UNA ENTRADA
+                %AL ESCALON PERFECTA SIN MOSTRAR EL INCREMENTO EN EL
+                %TIEMPO DE LO CONTRARIO SE VERIA COMO UNA RAMPA
+%ESTA ES LA QUE DA FORMA AL ESCALON
+signo=1;
+ 
+for i=2500:1:10000     %cambie aca 10:1:1000
+    %ESTE IF ES NECESARIO PARA DAR LA FORMA DEL ESCALON PERO SI LO USO ACA
+    %NO SE PUEDE REALIZAR UNA COMPARACIÓN CORRECTA CON LA GRAFICA DEL EXCEL
+    
+    %{
+    if i==5000
+        signo=0;
+    end
+    %}
+    
+    if signo==1
+        u(1,i)=12;  %ESTABLECE DESDE LA MUESTRA 100 A LA 500 UN VALOR DE 12
+    end
+    if signo==0
+        u(1,i)=-12;
+    end
+end
+ 
+figure(7)
+plot(t,u);grid on;      %GRAFICA DEL ESCALON U2
+title('u2');
+xlim([0 0.7]);
+ylim([-20 20]);
+ 
+%APLICANDO EL CODIGO DE CHEN
+ 
+ii=0;   %for t_inic=10:15
+ii=ii+1;
+ 
+%VALORES TOMADOS DE LA TABLA EXCEL (SELECCIONANDO 3 PUNTOS DEL GRAFICO)
+ 
+%MIS VALORES
+%A LOS TIEMPOS SE LES DEBE RESTAR EL TIEMPO EN DONDE BAJA LA CURVA
+%0.15 DEBIDO A QUE ES LA "ZONA MUERTA" ANTES DE QUE COMIENCE A DESENDER
+%LA CURVA.
+t1_2=0.000100099999991;  %LE RESTE 0.15 POR ZONA MUERTA
+y_t1_2=198.248802246762; %15307
+t2_2=0.000200099999994;  %LE RESTE 0.15 POR ZONA MUERTA
+y_2t2_2=116.01938755926; %16307
+t3_2=0.000300099999997;  %LE RESTE 0.15 POR ZONA MUERTA
+y_3t3_2=47.6923736992707;%17307
+ 
+StepAmplitude=1;
+%VALOR MAXIMO DE Y NEGATIVO (-25) SE LE RESTA EL VALOR MAXIMO DEL QUE
+%COMIENZA SIENDO 198. 
+y_end2=(-25-198.248762875376);%-25 es un valor promedio ya que oscila entre
+                              %-20 y -30 el valor final del torque con
+                              %carga.
+ 
+K2=y_end2/StepAmplitude;
+k1_2=((1/StepAmplitude)*y_t1_2/K2)-1;%Afecto el valor del Escalon
+k2_2=((1/StepAmplitude)*y_2t2_2/K2)-1;
+k3_2=((1/StepAmplitude)*y_3t3_2/K2)-1;
+be_2=4*k1_2^3*k3_2-3*k1_2^2*k2_2^2-4*k2_2^3+k3_2^2+6*k1_2*k2_2*k3_2;
+alfa1_2=(k1_2*k2_2+k3_2-sqrt(be_2))/(2*(k1_2^2+k2_2));
+alfa2_2=(k1_2*k2_2+k3_2+sqrt(be_2))/(2*(k1_2^2+k2_2));
+ 
+beta_2=(2*k1_2^3+3*k1_2*k2_2*k3_2-sqrt(be_2))/(sqrt(be_2));
+ 
+T1_ang_2=-t1_2/log(alfa1_2);  %VALOR DE T1 CON 7 DIGITOS LUEGO DE LA COMA
+T2_ang_2=-t1_2/log(alfa2_2);
+T3_ang_2=beta_2*(T1_ang_2-T2_ang_2)+T1_ang_2;
+T1_2(ii)=T1_ang_2;
+T2_2(ii)=T2_ang_2;
+T3_2(ii)=T3_ang_2;
+T3_ang_2=sum(T3_2/length(T3_2));
+T2_ang_2=sum(T2_2/length(T2_2));
+T1_ang_2=sum(T1_2/length(T1_2));
+ 
+sys_G_ang2=tf(K2,conv([T1_ang_2 1],[T2_ang_2 1]))
+ 
+figure(8);
+ 
+[yaprox2,taprox2]=lsim(sys_G_ang2, u/12, t);
+ 
+plot(taprox2,yaprox2,'red');title('wr Chen Con Torque');grid on;
+%xlim([0 0.7]);
+%ylim([-200 0]);
+ 
+%Sumo las 2 para obtener la curva completa
+figure(9);
+Gaprox=yaprox2+yaprox;
+plot(taprox,Gaprox,'r');title('Chen vs curva real');grid on;
+hold on;
+plot(datos(:,1),datos(:,2),'b');grid on;
+hold on; %Grafico wr
