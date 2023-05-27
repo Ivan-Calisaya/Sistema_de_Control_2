@@ -1,0 +1,105 @@
+%Con observador
+%clear all; close all;
+clc
+m=.1;Fricc=0.1; long=1.6;g=9.8;M=1.5;
+h=0.0001;tiempo=(80/h);delta_pp=0;phi_pp=0;
+delta_pp_o=0;phi_pp_o=0;
+%Condiciones iniciales
+phi(1)=pi; color='b';
+phi_p(1)=0; delta_p(1)=0; u(1)=0; delta(1)=0; i=1;indice=0;
+phi_o(1)=pi; color_o='r';
+phi_p_o(1)=0; delta_p_o(1)=0; uo(1)=0; delta_o(1)=0;
+ref=2;
+%punto de operacion
+xop=[0; 0; pi; 0];
+%Versión linealizada en el equilibrio estable
+Mat_A=[0 1 0 0;0 -Fricc/M -m*g/M 0; 0 0 0 1; 0 -Fricc/(long*M) -g*(m+M)/(long*M) 0]
+Mat_B=[0; 1/M; 0; 1/(long*M)]
+Mat_C=[1 0 0 0]; %La salida es posición
+Mat_M=[Mat_B Mat_A*Mat_B Mat_A^2*Mat_B Mat_A^3*Mat_B];%Matriz Controlabilidad
+%como tengo referencia distinta de 0 necesito hacer el sistema ampliado
+% Construcción del sistema ampliado
+Mat_Aa=[Mat_A zeros(4,1);-Mat_C 0];
+Mat_Ba=[Mat_B;0];
+Mat_Ma=[Mat_Ba Mat_Aa*Mat_Ba Mat_Aa^2*Mat_Ba Mat_Aa^3*Mat_Ba Mat_Aa^4*Mat_Ba];%Matriz Controlabilidad
+%Cálculo del controlador por LQR
+%Creo que tengo que ir variando el angulo y la velocidad del angulo
+Q=diag([2 1 100 10 0.1]);
+R=0.1; %Si achico R tiende a ser mas rapida la respuesta, o tambien voy aumentando Q
+%Construcción del Hamiltoniano para el cálculo del controlador
+Ha=[Mat_Aa -Mat_Ba*inv(R)*Mat_Ba'; -Q -Mat_Aa'];
+[n,va]=size(Ha);
+[V,D]=eig(Ha);MX1X2=[];
+for ii=1:n
+if real(D(ii,ii))<0
+MX1X2=[MX1X2 V(:,ii)];
+end
+end
+MX1=MX1X2(1:n/2,:); MX2=MX1X2(n/2+1:end,:);
+P=real(MX2*inv(MX1));%tomo la parte real por un tema de residuos
+Ka=inv(R)*Mat_Ba'*P;
+K=Ka(1:4); KI=-Ka(5);
+eig(Mat_Aa-Mat_Ba*Ka);%verifico polos con parte real negativa
+%Fin cálculo del controlador-
+%Cálculo del Observador-----------------------------------------------
+Mat_A_d=Mat_A';
+Mat_B_d=Mat_C';
+Mat_C_d=Mat_B';
+Qo=diag([192000 83580000 1/.00000009 4000000]);Ro=0.001;
+%Construcción del Hamiltoniano para el cálculo del observador
+Ho=[Mat_A_d -Mat_B_d*inv(Ro)*Mat_B_d'; -Qo -Mat_A_d'];
+[no,va]=size(Ho);
+[V,D]=eig(Ho);MX1X2=[];
+for ii=1:no
+if real(D(ii,ii))<0
+MX1X2=[MX1X2 V(:,ii)];
+end
+end
+MX1=MX1X2(1:no/2,:); MX2=MX1X2(no/2+1:end,:);
+Po=real(MX2*inv(MX1));
+Ko=(inv(Ro)*Mat_B_d'*Po)';%controlador con observador
+eig(Mat_A-Ko*Mat_C);
+%FIN cálculo del Observador
+J_(1)=0; V_(1)=0;
+psi(1)=0;
+x_hat=[0;0;0;0];
+while(i<(tiempo+1))
+estado=[delta(i); delta_p(i); phi(i); phi_p(i)];
+psi_p=ref-Mat_C*(estado-xop);%le resto el punto de operacion xop=[0;0;pi;0]
+psi(i+1)=psi(i)+psi_p*h;
+u(i)=-K*(estado-xop)+KI*psi(i+1); %sin observador
+% u(i)=-K*(x_hat-xop)+KI*psi(i+1);color='g'; %con Observador
+%cambio la masa y la referencia a 0 a la mitad del tiempo, asumo que delta ya vale 10 en ese momento
+if(i==40/h)
+m=10*m;
+ref=0;
+end
+delta_pp=(1/(M+m))*(u(i)-m*long*phi_pp*cos(phi(i))+m*long*phi_p(i)^2*sin(phi(i))-Fricc*delta_p(i));
+phi_pp=(1/long)*(g*sin(phi(i))-delta_pp*cos(phi(i)));
+delta_p(i+1)=delta_p(i)+h*delta_pp;
+delta(i+1)=delta(i)+h*delta_p(i);
+phi_p(i+1)=phi_p(i)+h*phi_pp;
+phi(i+1)=phi(i)+h*phi_p(i);
+% y_sal(i)=Mat_C*estado;
+%________OBSERVADOR__________
+y_sal_O(i)=Mat_C*(x_hat-xop);
+y_sal(i)=Mat_C*(estado-xop);
+%se puede corregir el cálculo del estado estimado utilizando la medición real
+% y_residuo = y_sal(i) - Mat_C*x_hat; %calcula el residuo entre la medición real y la medición estimada
+% x_hat = x_hat + Ko*y_residuo; %calcula la corrección del estado estimado como el producto de la matriz ganancia del observador (Ko) y el residuo
+x_hatp=Mat_A*(x_hat-xop)+Mat_B*u(i)+Ko*(y_sal(i)-y_sal_O(i));
+x_hat=x_hat+h*x_hatp;
+i=i+1;
+end
+figure(1);hold on; t=1:i;t=t*h;
+subplot(3,2,1);plot(t,phi_p,color);grid on; title('Velocidad ángulo');hold on;
+legend('Con Observador');legend('boxoff');
+subplot(3,2,2);plot(t,phi,color);grid on;title('Ángulo');hold on;
+subplot(3,2,3); plot(t,delta,color);grid on;title('Posición carro');hold on;
+ylim([-3 3])
+subplot(3,2,4);plot(t,delta_p,color);grid on;title('Velocidad carro');hold on;
+subplot(3,1,3);plot(t(1:end-1),u,color);grid on;title('Acción de control');xlabel('Tiempo en Seg.');hold on;
+figure(2);hold on;
+plot(phi,phi_p,color);grid on;xlabel('Ángulo');ylabel('Velocidad angular');hold on;
+figure(3);hold on;
+plot(delta,delta_p,color);grid on;xlabel('Posicion carro');ylabel('Velocidad carro');hold on;legend('Sin Observador','Con Observador');legend('boxoff');
