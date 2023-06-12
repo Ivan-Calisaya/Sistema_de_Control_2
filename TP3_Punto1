@@ -4,7 +4,7 @@ clear all;clc ;
 Laa=0.56e-3; 
 J=0.0019;
 Ra=1.35;
-B=0.82;
+B=0.82; B=0.000792; %Fig 6-9 del Kuo. Automatic control systems. En el cap 6-2-1 da los datos del fabricante.
 %B=0.0082;         %los chicos dicen usar el 0.82
 Ki=0.1;
 Km=0.1;
